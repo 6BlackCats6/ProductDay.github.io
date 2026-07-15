@@ -45,7 +45,7 @@ button:hover { background: #0b3041; } button:disabled { cursor: wait; opacity: .
 
 .topbar { display: flex; align-items: center; gap: 14px; min-height: 48px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
 .topbar h1 { margin: 0; color: var(--navy); font-size: 1.05rem; font-weight: 750; letter-spacing: -.02em; white-space: nowrap; }
-.topbar__controls { display: flex; align-items: center; gap: 12px; }
+.topbar__controls { display: flex; flex: 1 1 auto; align-items: center; gap: 12px; }
 .meta-pill { color: var(--muted); font-size: .76rem; font-weight: 650; white-space: nowrap; }
 .dashboard-actions { display: contents; }
 .dashboard-actions #sign-out-button { margin-left: auto; }
