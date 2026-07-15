@@ -19,6 +19,7 @@
         </div>
       </header>
 
+      <section id="attention-summary" class="attention-summary" aria-live="polite"></section>
       <div id="dashboard" class="dashboard" aria-live="polite"></div>
 
       <footer id="engagement-footer" class="engagement-footer">
@@ -33,7 +34,10 @@
       <article class="metric-card">
         <div class="metric-card__header">
           <h3></h3>
-          <span class="trend-badge"></span>
+          <div class="metric-card__badges">
+            <span class="attention-badge" hidden></span>
+            <span class="trend-badge"></span>
+          </div>
         </div>
         <p class="metric-value"></p>
         <p class="metric-period"></p>

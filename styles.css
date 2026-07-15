@@ -35,6 +35,26 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(2.2rem, 5vw, 4.3rem); lette
 .engagement-footer .section { margin-top: 32px; }
 .engagement-footer .notice { margin-top: 36px; }
 
+.attention-summary { margin: 36px 0 10px; }
+.attention-summary__panel { border: 1px solid #f0d09d; border-radius: 16px; background: #fffaf0; padding: 20px; }
+.attention-summary__panel[data-state="clear"] { border-color: #bde3dc; background: #f1fbf8; }
+.attention-summary__header { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.attention-summary h2 { margin: 0; color: var(--navy); font-size: 1.2rem; letter-spacing: -.02em; }
+.attention-summary__header p { margin: 0; color: var(--muted); font-size: .84rem; }
+.attention-list { display: grid; gap: 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+.attention-list a { display: flex; gap: 12px; align-items: center; justify-content: space-between; border-radius: 10px; background: rgb(255 255 255 / 75%); color: inherit; padding: 12px; text-decoration: none; }
+.attention-list a:hover { outline: 2px solid #d59a35; }
+.attention-list strong { display: block; color: var(--ink); font-size: .9rem; }
+.attention-list span { color: var(--muted); font-size: .78rem; }
+.severity-label { flex: 0 0 auto; border-radius: 999px; padding: 5px 8px; font-size: .69rem; font-weight: 800; text-transform: uppercase; }
+.severity-label[data-severity="critical"], .attention-badge[data-severity="critical"] { color: #9d2222; background: #fbe1e1; }
+.severity-label[data-severity="warning"], .attention-badge[data-severity="warning"] { color: #915500; background: #fff0d4; }
+
+.metric-card[data-severity="critical"] { border-color: #e2a4a4; box-shadow: inset 0 4px 0 #bb3d3d; }
+.metric-card[data-severity="warning"] { border-color: #edcf9a; box-shadow: inset 0 4px 0 #b76b00; }
+.metric-card__badges { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.attention-badge { border-radius: 999px; padding: 4px 7px; font-size: .68rem; font-weight: 800; line-height: 1; text-transform: uppercase; }
+
 .section { margin-top: 52px; }
 .section__title { margin: 0 0 5px; color: var(--navy); font-size: 1.45rem; letter-spacing: -.025em; }
 .section__description { margin: 0 0 20px; color: var(--muted); }
