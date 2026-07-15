@@ -106,7 +106,7 @@ async function buildSnapshot() {
     sourceUpdatedAt: page.version.when,
     sections: metricDefinitions().map((section) => ({
       ...section,
-      metrics: section.metrics.map((definition) => ({ ...definition, history: parseHistory(cells.get(definition.sourceName) || "") }))
+      metrics: section.metrics.map((definition) => ({ ...definition, history: parseHistory(cells.get(definition.sourceKey || definition.sourceName) || "") }))
     }))
   };
 }
@@ -116,21 +116,26 @@ function metricDefinitions() {
     { title: "Fulfilment health", description: "Operational quality and fulfilment flow indicators.", metrics: [
       def("Outdated fulfilments rate", "Outdated fulfilments rate", "Lower is better", "down"), def("Funnel time: new → delivered", "Funnel time New → Delivered (per step)", "Better than SLA", "down"), def("Funnel conversion: new → delivered", "Funnel conversion New → Delivered (per step)", ">90%", "watch"), def("Rejected fulfilments", "% of rejected fulfilments", "<5%", "down"), def("Stock-related cancellations", "% of cancellations due to irrelevant stocks (DBS)", "<3%", "down") ] },
     { title: "Bookings & stock availability", description: "Vendor Portal booking adoption and purchase-order availability.", metrics: [
-      def("VP bookings adoption", "Adoption rate", "100%", "up"), def("Approved POs without changes", "% of Approved PO without changes", ">90%", "watch"), def("FBO on-time stock availability", "FBO On-time stock availability", "", "up"), def("GFR on-time stock availability", "GFR On-time stock availability", "", "up") ] },
+      def("VP bookings adoption", "Adoption rate", "100%", "up", "POs, Bookings & Deliveries::Adoption rate"), def("Approved POs without changes", "% of Approved PO without changes", ">90%", "watch"), def("FBO on-time stock availability", "FBO On-time stock availability", "", "up"), def("GFR on-time stock availability", "GFR On-time stock availability", "", "up") ] },
     { title: "Promotions", description: "Marketplace promotion coverage for sellers and live SKUs.", metrics: [ def("Seller promo coverage", "Seller promo coverage", "", "up"), def("SKU promo coverage", "SKU Promo coverage", "", "up") ] },
     { title: "Engagement & support", placement: "footer", description: "Product adoption and support signals from the latest confirmed monthly snapshot.", metrics: [
       def("VP monthly active users", "MAU VP", "Upward trend", "up"), def("Seller adoption rate", "Seller adoption rate", "Upward trend", "up"), def("Ops support tickets / active user", "Sellers support tickets rate (Ops scope)", "Downward trend", "down"), def("Customer support tickets / active seller", "Customer support tickets rate (sellers/products scope)", "Downward trend", "down"), def("Average GMV per active seller", "Average GMV per active seller", "Upward trend", "up"), def("GFR supplier adoption rate", "GFR supplier adoption rate", "Upward trend", "watch") ] }
   ];
 }
 
-function def(name, sourceName, target, kind) { return { name, sourceName, target, trend: { kind, label: kind === "watch" ? "data gap" : kind } }; }
+function def(name, sourceName, target, kind, sourceKey) { return { name, sourceName, ...(sourceKey ? { sourceKey } : {}), target, trend: { kind, label: kind === "watch" ? "data gap" : kind } }; }
 
 function readMetricCells(html) {
   const rows = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)];
   const result = new Map();
   for (const row of rows) {
     const cells = [...row[1].matchAll(/<t[hd]\b[^>]*>([\s\S]*?)<\/t[hd]>/gi)].map((match) => match[1]);
-    if (cells.length >= 4) result.set(toText(cells[1]), cells[3]);
+    if (cells.length >= 4) {
+      const section = toText(cells[0]);
+      const metric = toText(cells[1]);
+      result.set(metric, cells[3]);
+      if (section) result.set(`${section}::${metric}`, cells[3]);
+    }
   }
   return result;
 }
