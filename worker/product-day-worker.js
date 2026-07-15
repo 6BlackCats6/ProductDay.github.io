@@ -5,6 +5,7 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 const ROOT = "/Users/AlekseiSereda/Codex";
+const CODEX_HOME = "/Users/AlekseiSereda/.codex";
 const APP_ROOT = path.join(ROOT, "ProductDay.github.io");
 const CONFIG_PATH = path.join(APP_ROOT, "worker", "product-day-worker.env");
 const WORKER_LOCK = path.join("/tmp", "product-day-worker.lock");
@@ -56,7 +57,7 @@ async function main() {
 }
 
 function runRefreshPipeline() {
-  const skill = path.join(ROOT, ".codex", "skills", "sx-ops-metrics-refresh", "scripts");
+  const skill = path.join(CODEX_HOME, "skills", "sx-ops-metrics-refresh", "scripts");
   const output = "/tmp/product-day-sx-metrics.json";
   const updates = "/tmp/product-day-sx-updates.json";
   run("node", [path.join(skill, "collect_sx_ops_metrics.js"), "--output", output, "--updates-file", updates]);
