@@ -28,10 +28,10 @@ body {
 button { border: 0; border-radius: 10px; background: var(--navy); color: white; cursor: pointer; font: inherit; font-weight: 750; padding: 11px 15px; }
 button:hover { background: #0b3041; } button:disabled { cursor: wait; opacity: .65; }
 .form-message { min-height: 20px; margin: 0; color: var(--red); font-size: .85rem; }
-.dashboard-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.dashboard-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .button-secondary { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .button-secondary:hover { background: #eef3f5; }
-.refresh-progress { max-width: 620px; margin-top: 16px; border: 1px solid #bde3dc; border-radius: 14px; background: #f1fbf8; padding: 14px 16px; }
+.refresh-progress { width: 100%; margin-top: 14px; border: 1px solid #bde3dc; border-radius: 14px; background: #f1fbf8; padding: 14px 16px; }
 .refresh-progress[data-status="failed"] { border-color: #e2a4a4; background: #fff5f5; }
 .refresh-progress[data-status="completed"] { border-color: #bde3dc; background: #f1fbf8; }
 .refresh-progress__topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--navy); font-size: .9rem; }
@@ -43,12 +43,13 @@ button:hover { background: #0b3041; } button:disabled { cursor: wait; opacity: .
 .refresh-progress[data-status="failed"] .refresh-progress__track span { background: var(--red); }
 .refresh-progress__topline + .refresh-progress__track + p { margin: 9px 0 0; color: var(--muted); font-size: .82rem; line-height: 1.45; }
 
-.hero { max-width: 900px; }
-.eyebrow { margin: 0 0 10px; color: var(--teal); font-size: .8rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-h1 { margin: 0; color: var(--navy); font-size: clamp(2.2rem, 4vw, 3.65rem); letter-spacing: -.055em; line-height: 1; }
-.intro { max-width: 720px; margin: 16px 0; color: var(--muted); font-size: 1.02rem; line-height: 1.55; }
-.meta-row { display: flex; flex-wrap: wrap; gap: 8px; }
-.meta-pill { border: 1px solid var(--line); border-radius: 99px; background: var(--surface); color: var(--muted); padding: 7px 11px; font-size: .82rem; font-weight: 650; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; min-height: 58px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.topbar__brand { display: flex; align-items: center; gap: 10px; color: var(--teal); font-size: .83rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.topbar__brand h1 { margin: 0; color: var(--navy); font-size: 1rem; font-weight: 750; letter-spacing: -.015em; text-transform: none; }
+.topbar__divider { color: #aab5bc; font-weight: 500; }
+.topbar__controls, .meta-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.meta-pill { color: var(--muted); font-size: .76rem; font-weight: 650; white-space: nowrap; }
+.meta-status { color: var(--muted); font-size: .76rem; font-weight: 650; white-space: nowrap; }
 
 .notice { display: flex; gap: 10px; align-items: flex-start; margin: 36px 0 42px; border: 1px solid #f1d39d; border-radius: 14px; background: #fff8e9; color: #664d1f; padding: 14px 16px; }
 .notice p { margin: 0; line-height: 1.5; }
@@ -56,7 +57,7 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(2.2rem, 4vw, 3.65rem); lett
 .engagement-footer .section { margin-top: 32px; }
 .engagement-footer .notice { margin-top: 36px; }
 
-.key-health { margin-top: 34px; }
+.key-health { margin-top: 28px; }
 .key-health__header { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .key-health__header h2 { margin: 0; color: var(--navy); font-size: 1.6rem; letter-spacing: -.035em; }
 .key-health__header > p { margin: 0; color: var(--muted); font-size: .88rem; }
@@ -109,6 +110,9 @@ h1 { margin: 0; color: var(--navy); font-size: clamp(2.2rem, 4vw, 3.65rem); lett
 
 @media (max-width: 600px) {
   .page-shell { width: min(100% - 24px, 1200px); padding-top: 42px; }
+  .topbar { align-items: flex-start; }
+  .topbar__controls { align-items: flex-start; flex-direction: column; gap: 10px; }
+  .topbar__brand { font-size: .74rem; }
   .key-health__header { align-items: flex-start; flex-direction: column; gap: 6px; }
   .key-health__grid { grid-template-columns: 1fr; }
   .metric-card { min-height: 238px; }
