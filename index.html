@@ -34,6 +34,16 @@
           <button id="update-button" type="button">Update</button>
           <button id="sign-out-button" class="button-secondary" type="button">Sign out</button>
         </div>
+        <section id="refresh-progress" class="refresh-progress" aria-live="polite" hidden>
+          <div class="refresh-progress__topline">
+            <strong id="refresh-progress-title">Preparing update</strong>
+            <span id="refresh-progress-percent">0%</span>
+          </div>
+          <div class="refresh-progress__track" role="progressbar" aria-label="Dashboard update progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <span id="refresh-progress-bar"></span>
+          </div>
+          <p id="refresh-progress-detail"></p>
+        </section>
       </header>
 
       <section id="attention-summary" class="attention-summary" aria-live="polite"></section>

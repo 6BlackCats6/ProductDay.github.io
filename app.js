@@ -6,6 +6,11 @@ const template = document.querySelector("#metric-card-template");
 const loginScreen = document.querySelector("#login-screen");
 const appContent = document.querySelector("#app-content");
 const refreshState = document.querySelector("#refresh-state");
+const refreshProgress = document.querySelector("#refresh-progress");
+const refreshProgressTitle = document.querySelector("#refresh-progress-title");
+const refreshProgressPercent = document.querySelector("#refresh-progress-percent");
+const refreshProgressBar = document.querySelector("#refresh-progress-bar");
+const refreshProgressDetail = document.querySelector("#refresh-progress-detail");
 const sessionKey = "product-day-session";
 let session = loadSession();
 let requestPoller;
@@ -56,30 +61,61 @@ async function loadDashboard() {
 
 async function requestUpdate() {
   const button = document.querySelector("#update-button");
-  button.disabled = true; refreshState.textContent = "Requesting update…";
+  button.disabled = true; refreshState.textContent = "Requesting update…"; showRefreshProgress({ status: "queued", message: "Requesting an update…" });
   try {
     const result = await rest("/rest/v1/rpc/request_dashboard_refresh", "POST", {});
     const request = Array.isArray(result) ? result[0] : result;
     refreshState.textContent = request.status === "queued" ? "Update queued" : "Update already running";
+    showRefreshProgress(request);
     watchRequest(request.id);
-  } catch { refreshState.textContent = "Could not request update"; button.disabled = false; }
+  } catch { refreshState.textContent = "Could not request update"; refreshProgress.hidden = true; button.disabled = false; }
 }
 
 function watchRequest(id) {
   clearInterval(requestPoller);
-  requestPoller = setInterval(async () => {
+  const poll = async () => {
     try {
-      const rows = await rest(`/rest/v1/refresh_requests?id=eq.${id}&select=status,message,finished_at`);
+      const rows = await rest(`/rest/v1/refresh_requests?id=eq.${id}&select=status,message,requested_at,started_at,finished_at`);
       const request = rows[0];
       if (!request) return;
-      refreshState.textContent = request.status === "running" ? "Updating source metrics…" : request.status;
+      showRefreshProgress(request);
+      refreshState.textContent = request.status === "running" ? "Update in progress" : request.status;
       if (["completed", "skipped", "failed"].includes(request.status)) {
         clearInterval(requestPoller); document.querySelector("#update-button").disabled = false;
         if (request.status === "completed") { await loadDashboard(); refreshState.textContent = "Updated just now"; }
-        if (request.status === "failed") refreshState.textContent = "Update failed — check worker";
+        if (request.status === "failed") refreshState.textContent = "Update failed";
       }
     } catch { /* retain the last visible status and retry */ }
-  }, 10000);
+  };
+  poll();
+  requestPoller = setInterval(poll, 5000);
+}
+
+function showRefreshProgress(request) {
+  const state = refreshPresentation(request);
+  refreshProgress.hidden = false;
+  refreshProgress.dataset.status = request.status;
+  refreshProgressTitle.textContent = state.title;
+  refreshProgressPercent.textContent = `${state.percent}%`;
+  refreshProgressBar.style.width = `${state.percent}%`;
+  refreshProgress.querySelector('[role="progressbar"]').setAttribute("aria-valuenow", state.percent);
+  refreshProgressDetail.textContent = state.detail;
+}
+
+function refreshPresentation(request) {
+  const message = request.message || "";
+  const elapsed = request.started_at || request.requested_at ? ` · ${formatElapsed(request.started_at || request.requested_at)}` : "";
+  if (request.status === "completed") return { title: "Update complete", percent: 100, detail: message || "The latest dashboard snapshot is ready." };
+  if (request.status === "failed") return { title: "Update did not complete", percent: 100, detail: message || "The worker did not provide an error message." };
+  if (request.status === "queued") return { title: "Update queued", percent: 8, detail: "Waiting for the local worker to start. Usually less than a minute." };
+  if (message.includes("step 3")) return { title: "Finishing dashboard", percent: 82, detail: `Creating the protected snapshot and checking the executive dashboard${elapsed}. Usually under a minute left.` };
+  if (message.includes("step 2")) return { title: "Publishing source metrics", percent: 65, detail: `Writing validated values to Confluence${elapsed}. Usually about a minute left.` };
+  return { title: "Collecting metrics", percent: 35, detail: `Getting the latest data from Jira, Metabase and Canvas${elapsed}. This is usually the longest step.` };
+}
+
+function formatElapsed(start) {
+  const seconds = Math.max(0, Math.round((Date.now() - new Date(start).getTime()) / 1000));
+  return seconds < 60 ? `${seconds}s elapsed` : `${Math.floor(seconds / 60)}m ${seconds % 60}s elapsed`;
 }
 
 function renderDashboard(data, createdAt) {

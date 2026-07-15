@@ -31,6 +31,17 @@ button:hover { background: #0b3041; } button:disabled { cursor: wait; opacity: .
 .dashboard-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 .button-secondary { border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .button-secondary:hover { background: #eef3f5; }
+.refresh-progress { max-width: 620px; margin-top: 16px; border: 1px solid #bde3dc; border-radius: 14px; background: #f1fbf8; padding: 14px 16px; }
+.refresh-progress[data-status="failed"] { border-color: #e2a4a4; background: #fff5f5; }
+.refresh-progress[data-status="completed"] { border-color: #bde3dc; background: #f1fbf8; }
+.refresh-progress__topline { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--navy); font-size: .9rem; }
+.refresh-progress__topline span { color: var(--teal); font-size: .8rem; font-weight: 800; }
+.refresh-progress[data-status="failed"] .refresh-progress__topline span { color: var(--red); }
+.refresh-progress__track { height: 8px; overflow: hidden; margin-top: 10px; border-radius: 99px; background: #d7e8e5; }
+.refresh-progress[data-status="failed"] .refresh-progress__track { background: #f1dada; }
+.refresh-progress__track span { display: block; width: 0; height: 100%; border-radius: inherit; background: var(--teal); transition: width .35s ease; }
+.refresh-progress[data-status="failed"] .refresh-progress__track span { background: var(--red); }
+.refresh-progress__topline + .refresh-progress__track + p { margin: 9px 0 0; color: var(--muted); font-size: .82rem; line-height: 1.45; }
 
 .hero { max-width: 780px; }
 .eyebrow { margin: 0 0 10px; color: var(--teal); font-size: .8rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }

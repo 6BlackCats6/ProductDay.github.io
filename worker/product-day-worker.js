@@ -23,7 +23,7 @@ async function main() {
     const secret = readEnv(CONFIG_PATH).PRODUCT_DAY_SUPABASE_SECRET_KEY;
     if (!secret) throw new Error("PRODUCT_DAY_SUPABASE_SECRET_KEY is missing.");
     if (process.argv.includes("--seed")) {
-      runRefreshPipeline();
+      await runRefreshPipeline();
       const snapshot = await buildSnapshot();
       const saved = await insertSnapshot(secret, snapshot);
       console.log(`Created initial dashboard snapshot ${saved.id}.`);
@@ -31,16 +31,21 @@ async function main() {
     }
     const request = await nextRequest(secret);
     if (!request) return;
-    const running = await updateRequest(secret, request.id, { status: "running", started_at: new Date().toISOString(), message: "Refreshing source metrics" });
+    const running = await updateRequest(secret, request.id, {
+      status: "running",
+      started_at: new Date().toISOString(),
+      message: "Collecting metrics from Jira, Metabase and Canvas (step 1 of 3)."
+    });
     if (!running) return;
     try {
-      runRefreshPipeline();
+      await runRefreshPipeline(async (message) => updateRequest(secret, request.id, { message }));
       const snapshot = await buildSnapshot();
       const saved = await insertSnapshot(secret, snapshot);
+      const summary = summarizeSnapshot(snapshot);
       await updateRequest(secret, request.id, {
         status: "completed",
         finished_at: new Date().toISOString(),
-        message: "Dashboard updated successfully.",
+        message: `Dashboard updated successfully. ${summary.metrics} metrics refreshed; ${summary.pending} waiting for data transfer.`,
         snapshot_id: saved.id
       });
     } catch (error) {
@@ -56,15 +61,22 @@ async function main() {
   }
 }
 
-function runRefreshPipeline() {
+async function runRefreshPipeline(reportProgress = async () => {}) {
   const skill = path.join(CODEX_HOME, "skills", "sx-ops-metrics-refresh", "scripts");
   const output = "/tmp/product-day-sx-metrics.json";
   const updates = "/tmp/product-day-sx-updates.json";
   // LaunchAgents receive a minimal PATH, so use the Node binary that started
   // this worker instead of relying on a `node` command lookup.
   run(process.execPath, [path.join(skill, "collect_sx_ops_metrics.js"), "--output", output, "--updates-file", updates]);
+  await reportProgress("Publishing source metrics to Confluence (step 2 of 3).");
   run("python3", [path.join(skill, "update_sx_ops_metrics_page.py"), "--updates-file", updates, "--apply"]);
+  await reportProgress("Updating the executive dashboard and protected snapshot (step 3 of 3).");
   run(process.execPath, [path.join(ROOT, "scripts", "sx-ops-one-screen-dashboard.js"), "--refresh-if-needed"]);
+}
+
+function summarizeSnapshot(snapshot) {
+  const metrics = snapshot.sections.flatMap((section) => section.metrics);
+  return { metrics: metrics.length, pending: metrics.filter((metric) => metric.history.at(-1)?.status === "pending").length };
 }
 
 function run(command, args) {
