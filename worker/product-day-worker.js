@@ -60,14 +60,24 @@ function runRefreshPipeline() {
   const skill = path.join(CODEX_HOME, "skills", "sx-ops-metrics-refresh", "scripts");
   const output = "/tmp/product-day-sx-metrics.json";
   const updates = "/tmp/product-day-sx-updates.json";
-  run("node", [path.join(skill, "collect_sx_ops_metrics.js"), "--output", output, "--updates-file", updates]);
+  // LaunchAgents receive a minimal PATH, so use the Node binary that started
+  // this worker instead of relying on a `node` command lookup.
+  run(process.execPath, [path.join(skill, "collect_sx_ops_metrics.js"), "--output", output, "--updates-file", updates]);
   run("python3", [path.join(skill, "update_sx_ops_metrics_page.py"), "--updates-file", updates, "--apply"]);
-  run("node", [path.join(ROOT, "scripts", "sx-ops-one-screen-dashboard.js"), "--refresh-if-needed"]);
+  run(process.execPath, [path.join(ROOT, "scripts", "sx-ops-one-screen-dashboard.js"), "--refresh-if-needed"]);
 }
 
 function run(command, args) {
   const result = spawnSync(command, args, { cwd: ROOT, encoding: "utf8", timeout: 20 * 60 * 1000 });
-  if (result.status !== 0) throw new Error(`${path.basename(command)} failed: ${(result.stderr || result.stdout || "").trim()}`);
+  if (result.status !== 0) {
+    const details = [
+      result.error?.message,
+      result.signal ? `terminated by ${result.signal}` : "",
+      result.stderr,
+      result.stdout
+    ].filter(Boolean).join("\n").trim();
+    throw new Error(`${path.basename(command)} failed${result.status == null ? "" : ` (exit ${result.status})`}: ${details || "no output"}`);
+  }
 }
 
 async function buildSnapshot() {
