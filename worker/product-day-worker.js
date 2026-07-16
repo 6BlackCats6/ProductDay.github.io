@@ -168,7 +168,12 @@ function toText(value) { return value.replace(/<br\s*\/?>/gi, " ").replace(/<[^>
 
 async function nextRequest(secret) {
   const rows = await api(secret, "/rest/v1/refresh_requests?status=eq.queued&order=requested_at.asc&limit=1", "GET");
-  return rows[0] || null;
+  if (rows[0]) return rows[0];
+  // A transient network failure can prevent the worker from writing the
+  // terminal status. Recover only runs that have been inactive for 15 minutes.
+  const staleBefore = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const stale = await api(secret, `/rest/v1/refresh_requests?status=eq.running&started_at=lt.${encodeURIComponent(staleBefore)}&order=started_at.asc&limit=1`, "GET");
+  return stale[0] || null;
 }
 async function updateRequest(secret, id, values) {
   const rows = await api(secret, `/rest/v1/refresh_requests?id=eq.${id}`, "PATCH", values, "return=representation");
@@ -184,5 +189,23 @@ async function api(secret, pathname, method, body, prefer) {
   return response.status === 204 ? [] : response.json();
 }
 function readEnv(file) { return Object.fromEntries(fs.readFileSync(file, "utf8").split(/\r?\n/).filter((line) => line.includes("=") && !line.trim().startsWith("#")).map((line) => { const i = line.indexOf("="); return [line.slice(0, i), line.slice(i + 1).replace(/^['"]|['"]$/g, "")]; })); }
-function claimLocalLock() { try { fs.writeFileSync(WORKER_LOCK, String(process.pid), { flag: "wx" }); return true; } catch { return false; } }
+function claimLocalLock() {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      fs.writeFileSync(WORKER_LOCK, String(process.pid), { flag: "wx" });
+      return true;
+    } catch (error) {
+      if (error.code !== "EEXIST") return false;
+      const previousPid = Number(fs.readFileSync(WORKER_LOCK, "utf8").trim());
+      if (Number.isInteger(previousPid) && previousPid > 0) {
+        try {
+          process.kill(previousPid, 0);
+          return false;
+        } catch { /* stale process */ }
+      }
+      try { fs.unlinkSync(WORKER_LOCK); } catch { return false; }
+    }
+  }
+  return false;
+}
 function releaseLocalLock() { try { fs.unlinkSync(WORKER_LOCK); } catch {} }
