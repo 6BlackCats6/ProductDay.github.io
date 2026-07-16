@@ -18,3 +18,11 @@ The local worker polls Supabase once a minute. When the authenticated dashboard 
 2. Copy `worker/product-day-worker.env.example` to `worker/product-day-worker.env` and add the Supabase secret key locally.
 3. Run `node worker/product-day-worker.js --seed` once to create the initial snapshot; normal worker runs process queued requests.
 4. Copy `worker/com.productday.refresh-worker.plist` into `~/Library/LaunchAgents/` and load it with `launchctl` to poll automatically.
+
+For a normal current-month refresh from Codex, use the local worker launcher instead of running the source collector directly:
+
+```bash
+node worker/request-dashboard-refresh.js --wait
+```
+
+It checks that the refresh service is online, queues one request, wakes the worker and returns its final status. Historical backfills, source investigations and formula changes still use the full SX Operations metrics workflow.
