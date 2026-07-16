@@ -21,6 +21,11 @@ create table if not exists public.refresh_requests (
   snapshot_id uuid references public.dashboard_snapshots(id)
 );
 
+create table if not exists public.worker_heartbeat (
+  id boolean primary key default true check (id),
+  checked_at timestamptz not null default now()
+);
+
 create unique index if not exists one_active_product_day_refresh
   on public.refresh_requests ((1)) where status in ('queued', 'running');
 
@@ -34,6 +39,7 @@ $$;
 
 alter table public.dashboard_snapshots enable row level security;
 alter table public.refresh_requests enable row level security;
+alter table public.worker_heartbeat enable row level security;
 
 drop policy if exists "product day reads snapshots" on public.dashboard_snapshots;
 create policy "product day reads snapshots" on public.dashboard_snapshots
@@ -41,6 +47,10 @@ create policy "product day reads snapshots" on public.dashboard_snapshots
 
 drop policy if exists "product day reads requests" on public.refresh_requests;
 create policy "product day reads requests" on public.refresh_requests
+  for select to authenticated using (public.is_product_day_admin());
+
+drop policy if exists "product day reads worker heartbeat" on public.worker_heartbeat;
+create policy "product day reads worker heartbeat" on public.worker_heartbeat
   for select to authenticated using (public.is_product_day_admin());
 
 create or replace function public.request_dashboard_refresh()

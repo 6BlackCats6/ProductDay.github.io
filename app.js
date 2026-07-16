@@ -7,6 +7,8 @@ const template = document.querySelector("#metric-card-template");
 const loginScreen = document.querySelector("#login-screen");
 const appContent = document.querySelector("#app-content");
 const refreshState = document.querySelector("#refresh-state");
+const refreshServiceStatus = document.querySelector("#refresh-service-status");
+const updateButton = document.querySelector("#update-button");
 const refreshProgress = document.querySelector("#refresh-progress");
 const refreshProgressTitle = document.querySelector("#refresh-progress-title");
 const refreshProgressPercent = document.querySelector("#refresh-progress-percent");
@@ -15,6 +17,8 @@ const refreshProgressDetail = document.querySelector("#refresh-progress-detail")
 const sessionKey = "product-day-session";
 let session = loadSession();
 let requestPoller;
+let workerStatusPoller;
+let refreshServiceOnline = false;
 
 const alertRules = {
   "Outdated fulfilments rate": ["higher", .2, .35, .5], "Funnel time: new → delivered": ["higher", .15, .3, 8], "Rejected fulfilments": ["higher", .2, .35, .3], "Stock-related cancellations": ["higher", .2, .35, .15], "Ops support tickets / active user": ["higher", .2, .35, .005], "Customer support tickets / active seller": ["higher", .2, .35, .03], "Funnel conversion: new → delivered": ["lower", .1, .2, 3], "VP bookings adoption": ["lower", .1, .2, 5], "Approved POs without changes": ["lower", .1, .2, 3], "FBO on-time stock availability": ["lower", .15, .3, 3], "GFR on-time stock availability": ["lower", .15, .3, 3], "Seller promo coverage": ["lower", .1, .2, 2], "SKU promo coverage": ["lower", .1, .2, 2], "VP monthly active users": ["lower", .1, .2, 100], "Seller adoption rate": ["lower", .1, .2, 3], "Average GMV per active seller": ["lower", .1, .2, .3]
@@ -24,12 +28,12 @@ const hiddenMetricNames = new Set(["GFR supplier adoption rate"]);
 
 document.querySelector("#login-form").addEventListener("submit", signIn);
 document.querySelector("#sign-out-button").addEventListener("click", signOut);
-document.querySelector("#update-button").addEventListener("click", requestUpdate);
+updateButton.addEventListener("click", requestUpdate);
 boot();
 
 async function boot() {
   if (!session) return showLogin();
-  try { await loadDashboard(); showDashboard(); } catch { signOut(); }
+  try { await loadDashboard(); showDashboard(); startWorkerStatusPolling(); } catch { signOut(); }
 }
 
 async function signIn(event) {
@@ -42,12 +46,14 @@ async function signIn(event) {
     localStorage.setItem(sessionKey, JSON.stringify(session));
     await loadDashboard();
     showDashboard();
+    startWorkerStatusPolling();
   } catch { message.textContent = "The password was not accepted."; }
 }
 
 function signOut() {
   session = null;
   clearInterval(requestPoller);
+  clearInterval(workerStatusPoller);
   localStorage.removeItem(sessionKey);
   dashboard.replaceChildren(); keyHealthGrid.replaceChildren(); engagementFooter.querySelectorAll(".section").forEach((node) => node.remove()); attentionSummary.replaceChildren();
   showLogin();
@@ -63,7 +69,12 @@ async function loadDashboard() {
 }
 
 async function requestUpdate() {
-  const button = document.querySelector("#update-button");
+  const button = updateButton;
+  await checkRefreshService();
+  if (!refreshServiceOnline) {
+    refreshState.textContent = "Refresh service offline";
+    return;
+  }
   button.disabled = true; refreshState.textContent = "Requesting update…"; showRefreshProgress({ status: "queued", message: "Requesting an update…" });
   try {
     const result = await rest("/rest/v1/rpc/request_dashboard_refresh", "POST", {});
@@ -71,7 +82,7 @@ async function requestUpdate() {
     refreshState.textContent = request.status === "queued" ? "Update queued" : "Update already running";
     showRefreshProgress(request);
     watchRequest(request.id);
-  } catch { refreshState.textContent = "Could not request update"; refreshProgress.hidden = true; button.disabled = false; }
+  } catch { refreshState.textContent = "Could not request update"; refreshProgress.hidden = true; updateRefreshButton(); }
 }
 
 function watchRequest(id) {
@@ -84,7 +95,7 @@ function watchRequest(id) {
       showRefreshProgress(request);
       refreshState.textContent = request.status === "running" ? "Update in progress" : request.status;
       if (["completed", "skipped", "failed"].includes(request.status)) {
-        clearInterval(requestPoller); document.querySelector("#update-button").disabled = false;
+        clearInterval(requestPoller); requestPoller = undefined; updateRefreshButton();
         if (request.status === "completed") { await loadDashboard(); refreshState.textContent = "Updated just now"; }
         if (request.status === "failed") refreshState.textContent = "Update failed";
       }
@@ -92,6 +103,30 @@ function watchRequest(id) {
   };
   poll();
   requestPoller = setInterval(poll, 5000);
+}
+
+function startWorkerStatusPolling() {
+  clearInterval(workerStatusPoller);
+  checkRefreshService();
+  workerStatusPoller = setInterval(checkRefreshService, 30000);
+}
+
+async function checkRefreshService() {
+  try {
+    const rows = await rest("/rest/v1/worker_heartbeat?select=checked_at&order=checked_at.desc&limit=1");
+    const lastCheck = rows[0]?.checked_at;
+    refreshServiceOnline = Boolean(lastCheck) && Date.now() - new Date(lastCheck).getTime() < 3 * 60 * 1000;
+  } catch {
+    refreshServiceOnline = false;
+  }
+  refreshServiceStatus.textContent = refreshServiceOnline ? "Refresh service ready" : "Refresh service offline";
+  refreshServiceStatus.dataset.state = refreshServiceOnline ? "online" : "offline";
+  updateRefreshButton();
+  return refreshServiceOnline;
+}
+
+function updateRefreshButton() {
+  updateButton.disabled = !refreshServiceOnline || Boolean(requestPoller);
 }
 
 function showRefreshProgress(request) {

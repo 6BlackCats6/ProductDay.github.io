@@ -22,6 +22,7 @@ async function main() {
   try {
     const secret = readEnv(CONFIG_PATH).PRODUCT_DAY_SUPABASE_SECRET_KEY;
     if (!secret) throw new Error("PRODUCT_DAY_SUPABASE_SECRET_KEY is missing.");
+    await reportHeartbeat(secret);
     if (process.argv.includes("--seed")) {
       await runRefreshPipeline();
       const snapshot = await buildSnapshot();
@@ -182,6 +183,13 @@ async function updateRequest(secret, id, values) {
 async function insertSnapshot(secret, payload) {
   const rows = await api(secret, "/rest/v1/dashboard_snapshots", "POST", { source_updated_at: payload.sourceUpdatedAt, payload }, "return=representation");
   return rows[0];
+}
+async function reportHeartbeat(secret) {
+  try {
+    await api(secret, "/rest/v1/worker_heartbeat?on_conflict=id", "POST", { id: true, checked_at: new Date().toISOString() }, "resolution=merge-duplicates,return=representation");
+  } catch (error) {
+    console.warn(`Refresh service heartbeat failed: ${error.message || error}`);
+  }
 }
 async function api(secret, pathname, method, body, prefer) {
   const response = await fetch(`${SUPABASE_URL}${pathname}`, { method, headers: { apikey: secret, Authorization: `Bearer ${secret}`, "Content-Type": "application/json", ...(prefer ? { Prefer: prefer } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) });
